@@ -67,6 +67,8 @@ function fHelp()
     printf "Script\n"
     printf "[Options]\n"
     printf "    %s\t %s\n" "-b|--build|build" "build test docker"
+    printf "    %s\t %s\n" "-r|--run|run" "run test docker"
+    printf "    %s\t %s\n" "--remove" "remove test docker"
     printf "[Others]\n"
     printf "    %s\t %s\n" "-h|--help"  "print help info"
     return 0
@@ -87,7 +89,7 @@ function fMain()
             -r|--run|run)
                 flag_run=y
                 ;;
-            --remove)
+            --remove|remove)
                 flag_rm=y
                 ;;
             -h|--help)

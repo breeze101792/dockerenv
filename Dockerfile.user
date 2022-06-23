@@ -1,0 +1,25 @@
+#######################################################
+##    Accound settings
+#######################################################
+# Add user
+RUN useradd -d /home/docker -m docker
+ADD account.conf /home/docker
+RUN chpasswd < /home/docker/account.conf
+RUN rm /home/docker/account.conf
+
+# Add sudo right
+RUN echo "docker  ALL=(ALL)       ALL" >> /etc/sudoers
+#######################################################
+##    Setup User Env
+#######################################################
+RUN mkdir /home/docker/tools
+ADD tools /home/docker/tools
+RUN ln -sf /home/docker/tools/vimrc /home/docker/.vimrc
+RUN echo "source /home/docker/tools/bashrc >> /home/docker/.bashrc"
+
+#######################################################
+##    Finalize Docker Setting
+#######################################################
+USER docker
+WORKDIR /home/docker
+ENV USER docker

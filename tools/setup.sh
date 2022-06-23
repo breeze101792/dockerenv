@@ -29,10 +29,13 @@ function fUbuntu()
     # Install require pkg
     apt-get install -y apt-utils
     apt-get install -y sudo build-essential
-    apt-get install -y tmux vim
+    apt-get install -y tmux vim git
 
     # setup sudo
-    echo "wheel  ALL=(ALL)       ALL" >> /etc/sudoers
+    # group 
+    echo "%wheel  ALL=(ALL)       ALL" >> /etc/sudoers
+    # for user
+    echo "docker  ALL=(ALL)       ALL" >> /etc/sudoers
 
     # use base as sh instead of dash
     ln -sf /bin/bash /bin/sh
