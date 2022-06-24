@@ -7,6 +7,12 @@ CONFIG_DOCKER_REPO="test"
 CONFIG_DOCKER_TAG="0.1"
 CONFIG_DOCKER_USER="docker"
 ##################################################################
+####    Variables
+##################################################################
+VAR_HOST_PASTHROUGH_PATH=""
+VAR_CONTAINER_PASTHROUGH_PATH="/mnt/work"
+
+##################################################################
 ##################################################################
 ####    Base Functions
 ##################################################################
@@ -50,7 +56,23 @@ function fBuild()
 function fRun()
 {
     fPrint_title "Run"
-    docker run -it --rm -u ${CONFIG_DOCKER_USER} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
+    local var_addictional_cmd=()
+    if [ -n "${VAR_HOST_PASTHROUGH_PATH}" ]
+    then
+        var_addictional_cmd+=("-v ${VAR_HOST_PASTHROUGH_PATH}:${VAR_CONTAINER_PASTHROUGH_PATH}")
+    fi
+    # --rm                             Automatically remove the container when it exits
+    echo docker run -it ${var_addictional_cmd[@]} --rm -u ${CONFIG_DOCKER_USER} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
+    docker run -it ${var_addictional_cmd[@]} --rm -u ${CONFIG_DOCKER_USER} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
+}
+function fCommit()
+{
+    fPrint_title "Commit"
+    local var_container_instance="${1}"
+    # docker commit c3f279d17e0a  svendowideit/testimage:version3
+    # docker commit ${var_container_instance} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
+    echo docker commit ${var_container_instance} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
+
 }
 function fRemove()
 {
@@ -68,18 +90,26 @@ function fHelp()
     printf "[Options]\n"
     printf "    %s\t %s\n" "-b|--build|build" "build test docker"
     printf "    %s\t %s\n" "-r|--run|run" "run test docker"
+    printf "    %s\t %s\n" "-c|--commit|commit" "commit container changes, ex. -c [container id]"
     printf "    %s\t %s\n" "--remove" "remove test docker"
+
+    printf "    %s\t %s\n" "-d|--disk|disk" "pass folder as disk on container"
     printf "[Others]\n"
-    printf "    %s\t %s\n" "-h|--help"  "print help info"
+    printf "    %s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
     return 0
 }
 
 function fMain()
 {
     fPrint_title "Docker Env Setup"
-    local flag_build=n
-    local flag_run=n
-    local flag_rm=n
+    local flag_build="n"
+    local flag_run="n"
+    local flag_rm="n"
+    local flag_commit="n"
+
+    local var_container_instance=""
+
+
     while [[ ${#} > 0 ]]
     do
         case ${1} in
@@ -88,6 +118,19 @@ function fMain()
                 ;;
             -r|--run|run)
                 flag_run=y
+                ;;
+            -c|--commit|commit)
+                flag_commit=y
+                var_container_instance=$2
+                shift 1
+                ;;
+            -d|--disk)
+                tmp_path=$2
+                if [ -d "${tmp_path}" ]
+                then
+                    VAR_HOST_PASTHROUGH_PATH=$(realpath ${tmp_path})
+                fi
+                shift 1
                 ;;
             --remove|remove)
                 flag_rm=y
@@ -118,6 +161,10 @@ function fMain()
     if [ "${flag_rm}" = "y" ]
     then
         fRemove
+    fi
+    if [ "${flag_commit}" = "y" ]
+    then
+        fCommit ${var_container_instance}
     fi
 }
 fMain $@
