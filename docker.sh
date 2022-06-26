@@ -3,8 +3,9 @@
 ####    Build config
 ##################################################################
 CONFIG_DOCKER_FILE="Dockerfile"
-CONFIG_DOCKER_REPO="test"
-CONFIG_DOCKER_TAG="0.1"
+# CONFIG_DOCKER_REPO="testlab"
+CONFIG_DOCKER_REPO="devlab"
+CONFIG_DOCKER_TAG="1.0"
 CONFIG_DOCKER_USER="docker"
 ##################################################################
 ####    Variables
@@ -91,14 +92,21 @@ function fHelp()
     printf "    %s\t %s\n" "-b|--build|build" "build test docker"
     printf "    %s\t %s\n" "-r|--run|run" "run test docker"
     printf "    %s\t %s\n" "-c|--commit|commit" "commit container changes, ex. -c [container id]"
+    printf "    %s\t %s\n" "-p|--prune|prune" "Clean system caced"
     printf "    %s\t %s\n" "--remove" "remove test docker"
 
     printf "    %s\t %s\n" "-d|--disk|disk" "pass folder as disk on container"
     printf "[Others]\n"
     printf "    %s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
+    fHelp_Docker
     return 0
 }
-
+function fHelp_Docker()
+{
+    printf "[Docker Original Commands]\n"
+    printf "    %s\t %s\n" "Rename Image" "docker image tag server:latest myname/server:latest"
+    return 0
+}
 function fMain()
 {
     fPrint_title "Docker Env Setup"
@@ -106,6 +114,7 @@ function fMain()
     local flag_run="n"
     local flag_rm="n"
     local flag_commit="n"
+    local flag_prune="n"
 
     local var_container_instance=""
 
@@ -118,6 +127,9 @@ function fMain()
                 ;;
             -r|--run|run)
                 flag_run=y
+                ;;
+            -p|--prune|prune)
+                flag_prune="y"
                 ;;
             -c|--commit|commit)
                 flag_commit=y
@@ -149,6 +161,11 @@ function fMain()
     done
 
     fInfo
+
+    if [ "${flag_prune}" = "y" ]
+    then
+        docker system prune -a
+    fi
 
     if [ "${flag_build}" = "y" ]
     then

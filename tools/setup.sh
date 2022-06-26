@@ -8,7 +8,7 @@ function fUser_setup()
     #######################################################
     # Add user
     groupadd wheel
-    useradd -G wheel -d ${var_home_path} -m docker
+    useradd -G wheel -d ${var_home_path} -m ${CONFIG_USER_NAME}
     echo ${CONFIG_USER_NAME}:${CONFIG_USER_PASSWD} | chpasswd
 
     #######################################################
@@ -18,7 +18,6 @@ function fUser_setup()
     chown ${CONFIG_USER_NAME}:${CONFIG_USER_NAME} ${var_home_path}/tools
     ln -sf ${var_home_path}/tools/vimrc ${var_home_path}/.vimrc
     echo "source ${var_home_path}/tools/bashrc" >> ${var_home_path}/.bashrc
-
 }
 function fUbuntu()
 {
@@ -35,7 +34,7 @@ function fUbuntu()
     # group 
     echo "%wheel  ALL=(ALL)       ALL" >> /etc/sudoers
     # for user
-    echo "docker  ALL=(ALL)       ALL" >> /etc/sudoers
+    echo "${CONFIG_USER_NAME}  ALL=(ALL)       ALL" >> /etc/sudoers
 
     # use base as sh instead of dash
     ln -sf /bin/bash /bin/sh
