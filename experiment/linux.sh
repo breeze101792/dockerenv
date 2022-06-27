@@ -1,6 +1,6 @@
 #!/bin/bash
 printf "##################################################################\n"
-printf "##  Default Experiment Environment Setup\n"
+printf "##  Linux Experiment Environment Setup\n"
 printf "##################################################################\n"
 function fPrepare()
 {
@@ -14,29 +14,26 @@ function fFinalize()
     printf "## Finalize Setup\n"
     printf "##################################################################\n"
 }
-function fDefault()
+function fLinux()
 {
     printf "##################################################################\n"
-    printf "## Default Setup\n"
+    printf "## Linux Setup\n"
     printf "##################################################################\n"
+    apt-get install -y git fakeroot build-essential ncurses-dev xz-utils libssl-dev bc flex libelf-dev bison
 }
 function fHelp()
 {
-    printf "Default Experiment Env\n"
+    printf "Linux Experiment Env\n"
     printf "[Options]\n"
     printf "    %s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
     return 0
 }
 function fMain()
 {
-    echo "Default setup"
-    local flag_info=n
+    echo "Linux setup"
     while [[ ${#} > 0 ]]
     do
         case ${1} in
-            --info)
-                flag_info=y
-                ;;
             -h|--help)
                 fHelp
                 exit 0
@@ -49,12 +46,9 @@ function fMain()
         esac
         shift 1
     done
-    return 0
+
     fPrepare
-    if [ "${flag_info}" = "y" ]
-    then
-        fDefault
-    fi
+    fLinux
     fFinalize
 }
 

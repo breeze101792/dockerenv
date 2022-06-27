@@ -3,7 +3,6 @@
 ####    Build config
 ##################################################################
 VAR_DEF_DOCKER_FILE="Dockerfile"
-# CONFIG_DOCKER_REPO="testlab"
 CONFIG_DOCKER_REPO="devlab"
 CONFIG_DOCKER_TAG="1.0"
 CONFIG_DOCKER_USER="docker"
@@ -64,8 +63,8 @@ function fBuild()
         rm -rf "${VAR_BUILD_PATH}"
     fi
     mkdir -p "${VAR_BUILD_PATH}"
-    cp -f "${VAR_EXPERIMENT_SCRIPT}" "${VAR_BUILD_PATH}/experiment.sh"
     cp -rf "${VAR_TOOLS_PATH}"/* "${VAR_BUILD_PATH}/"
+    cp -f "${VAR_EXPERIMENT_SCRIPT}" "${VAR_BUILD_PATH}/experiment.sh"
     echo '[Checkpoint] Setup env'
 
     # docker build --file ${VAR_DEF_DOCKER_FILE} --tag "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
@@ -95,11 +94,12 @@ function fCommit()
 function fRemove()
 {
     fPrint_title "Remove"
-    local var_imgid=$(docker image ls | grep ${CONFIG_DOCKER_REPO} | grep ${CONFIG_DOCKER_TAG} | cut -d " " -f 20-24)
+    local var_imgid=$(docker images | grep ${CONFIG_DOCKER_REPO} | grep ${CONFIG_DOCKER_TAG}  | tr -s ' ' | cut -d ' ' -f 3)
     if [ "${var_imgid}" != "" ]
     then
         echo "docker image rm ${var_imgid}"
         eval "docker image rm ${var_imgid}"
+        eval "docker images"
     fi
 }
 function fClean()
@@ -125,8 +125,16 @@ function fHelp()
     printf "    %s\t %s\n" "-e|--experiment|exp" "remove test docker"
 
     printf "    %s\t %s\n" "-d|--disk|disk" "pass folder as disk on container"
+    printf "[Shortcuts]\n"
+    printf "    %s\t %s\n" "ls" "list all images"
+    printf "[Environment]\n"
+    printf "    %s\t %s\n" "--android|android|an" "Config for android build env"
+    printf "    %s\t %s\n" "--linux|linux" "Config for linux build env"
     printf "[Others]\n"
     printf "    %s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
+    printf "[Example]\n"
+    printf "    %s\t %s\n" "Build android env" "docker.sh android -b"
+    printf "    %s\t %s\n" "Running android env" "docker.sh android -r"
     fHelp_Docker
     return 0
 }
@@ -189,6 +197,20 @@ function fMain()
                     return 1
                 fi
                 shift 1
+                ;;
+            ls)
+                docker images
+                return 0
+                ;;
+            --android|android|an)
+                CONFIG_DOCKER_REPO="android"
+                CONFIG_DOCKER_TAG="1.0"
+                VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/android.sh"
+                ;;
+            --linux|linux)
+                CONFIG_DOCKER_REPO="linux"
+                CONFIG_DOCKER_TAG="1.0"
+                VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/linux.sh"
                 ;;
             -h|--help)
                 fHelp
