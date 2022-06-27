@@ -12,6 +12,7 @@ CONFIG_DOCKER_USER="docker"
 ##################################################################
 VAR_HOST_PASTHROUGH_PATH=""
 VAR_CONTAINER_PASTHROUGH_PATH="/mnt/work"
+VAR_EXPERIMENT_SCRIPT="./tools/experiment.sh"
 
 ##################################################################
 ##################################################################
@@ -51,6 +52,10 @@ function fBuild()
 {
     fPrint_title "Build"
     echo "docker build --file ${CONFIG_DOCKER_FILE} --tag ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG} ."
+    # env setup
+    test -f ${VAR_EXPERIMENT_SCRIPT} && rm ${VAR_EXPERIMENT_SCRIPT}
+    printf "%s\n%s\n"  "#!/bin/bash" "echo 'Default Experiment Commands Setup'" >> ${VAR_EXPERIMENT_SCRIPT}
+
     # docker build --file ${CONFIG_DOCKER_FILE} --tag "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
     docker build --file ${CONFIG_DOCKER_FILE} -t "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
 }
