@@ -2,7 +2,7 @@
 ##################################################################
 ####    Build config
 ##################################################################
-CONFIG_DOCKER_FILE="Dockerfile"
+VAR_DEF_DOCKER_FILE="Dockerfile"
 # CONFIG_DOCKER_REPO="testlab"
 CONFIG_DOCKER_REPO="devlab"
 CONFIG_DOCKER_TAG="1.0"
@@ -10,9 +10,14 @@ CONFIG_DOCKER_USER="docker"
 ##################################################################
 ####    Variables
 ##################################################################
+VAR_ROOT_PATH="${PWD}"
+VAR_TOOLS_PATH="${VAR_ROOT_PATH}/tools"
+VAR_BUILD_PATH="${VAR_ROOT_PATH}/build"
+
+VAR_DEF_DOCKER_FILE="${VAR_ROOT_PATH}/Dockerfile"
+VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/default.sh"
 VAR_HOST_PASTHROUGH_PATH=""
 VAR_CONTAINER_PASTHROUGH_PATH="/mnt/work"
-VAR_EXPERIMENT_SCRIPT="./tools/experiment.sh"
 
 ##################################################################
 ##################################################################
@@ -51,13 +56,20 @@ function fInfo()
 function fBuild()
 {
     fPrint_title "Build"
-    echo "docker build --file ${CONFIG_DOCKER_FILE} --tag ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG} ."
-    # env setup
-    test -f ${VAR_EXPERIMENT_SCRIPT} && rm ${VAR_EXPERIMENT_SCRIPT}
-    printf "%s\n%s\n"  "#!/bin/bash" "echo 'Default Experiment Commands Setup'" >> ${VAR_EXPERIMENT_SCRIPT}
+    echo "docker build --file ${VAR_DEF_DOCKER_FILE} --tag ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG} ."
 
-    # docker build --file ${CONFIG_DOCKER_FILE} --tag "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
-    docker build --file ${CONFIG_DOCKER_FILE} -t "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
+    # env setup
+    if test -d ${VAR_BUILD_PATH}
+    then
+        rm -rf "${VAR_BUILD_PATH}"
+    fi
+    mkdir -p "${VAR_BUILD_PATH}"
+    cp -f "${VAR_EXPERIMENT_SCRIPT}" "${VAR_BUILD_PATH}/experiment.sh"
+    cp -rf "${VAR_TOOLS_PATH}"/* "${VAR_BUILD_PATH}/"
+    echo '[Checkpoint] Setup env'
+
+    # docker build --file ${VAR_DEF_DOCKER_FILE} --tag "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
+    docker build --file ${VAR_DEF_DOCKER_FILE} -t "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
 }
 function fRun()
 {
@@ -90,6 +102,16 @@ function fRemove()
         eval "docker image rm ${var_imgid}"
     fi
 }
+function fClean()
+{
+    fPrint_title "Clean none image"
+    for each_imeage in $(docker images | grep "none.*none" | tr -s ' ' | cut -d ' ' -f 3)
+    do
+        echo "Remove ${each_imeage}"
+        docker image remove ${each_imeage}
+    done
+
+}
 function fHelp()
 {
     printf "Script\n"
@@ -98,7 +120,9 @@ function fHelp()
     printf "    %s\t %s\n" "-r|--run|run" "run test docker"
     printf "    %s\t %s\n" "-c|--commit|commit" "commit container changes, ex. -c [container id]"
     printf "    %s\t %s\n" "-p|--prune|prune" "Clean system caced"
-    printf "    %s\t %s\n" "--remove" "remove test docker"
+    printf "    %s\t %s\n" "--remove|remove" "remove test docker"
+    printf "    %s\t %s\n" "--clean|clean" "remove none image"
+    printf "    %s\t %s\n" "-e|--experiment|exp" "remove test docker"
 
     printf "    %s\t %s\n" "-d|--disk|disk" "pass folder as disk on container"
     printf "[Others]\n"
@@ -119,6 +143,7 @@ function fMain()
     local flag_run="n"
     local flag_rm="n"
     local flag_commit="n"
+    local flag_clean="n"
     local flag_prune="n"
 
     local var_container_instance=""
@@ -152,6 +177,19 @@ function fMain()
             --remove|remove)
                 flag_rm=y
                 ;;
+            --clean|clean)
+                flag_clean=y
+                ;;
+            -e|--experiment|exp)
+                if [ -f "${VAR_EXPERIMENT_SCRIPT}" ]
+                then
+                    VAR_EXPERIMENT_SCRIPT="${2}"
+                else
+                    echo "Can't found experiment script"
+                    return 1
+                fi
+                shift 1
+                ;;
             -h|--help)
                 fHelp
                 exit 0
@@ -170,6 +208,10 @@ function fMain()
     if [ "${flag_prune}" = "y" ]
     then
         docker system prune -a
+    fi
+    if [ "${flag_clean}" = "y" ]
+    then
+        fClean
     fi
 
     if [ "${flag_build}" = "y" ]

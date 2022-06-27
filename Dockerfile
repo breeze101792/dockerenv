@@ -25,8 +25,7 @@ MAINTAINER breeze101792@gmail.com
 #######################################################
 ##    System settings
 #######################################################
-ADD tools /root/tools
-ADD tools /root/tools
+ADD build /root/tools
 RUN bash /root/tools/setup.sh --ubuntu --user docker
 RUN bash /root/tools/experiment.sh
 
