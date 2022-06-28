@@ -2,21 +2,30 @@
 ##################################################################
 ####    Build config
 ##################################################################
-VAR_DEF_DOCKER_FILE="Dockerfile"
 CONFIG_DOCKER_REPO="devlab"
 CONFIG_DOCKER_TAG="1.0"
-CONFIG_DOCKER_USER="docker"
+
 ##################################################################
-####    Variables
+####    Path Variables
 ##################################################################
 VAR_ROOT_PATH="${PWD}"
 VAR_TOOLS_PATH="${VAR_ROOT_PATH}/tools"
 VAR_BUILD_PATH="${VAR_ROOT_PATH}/build"
 
-VAR_DEF_DOCKER_FILE="${VAR_ROOT_PATH}/Dockerfile"
 VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/default.sh"
 VAR_HOST_PASTHROUGH_PATH=""
 VAR_CONTAINER_PASTHROUGH_PATH="/mnt/work"
+VAR_DEF_DOCKER_FILE="${VAR_BUILD_PATH}/Dockerfile"
+
+##################################################################
+####    Docker file Variables
+##################################################################
+VAR_BASE_IMAGE="ubuntu"
+VAR_BASE_IMAGE_TAG="18.04"
+
+VAR_MAINTAINER="breeze101792@gmail.com"
+VAR_USER_NAME="docker"
+VAR_USER_PASS="123456"
 
 ##################################################################
 ##################################################################
@@ -26,9 +35,7 @@ VAR_CONTAINER_PASTHROUGH_PATH="/mnt/work"
 function fPrint_title()
 {
     echo "##################################################################"
-    echo "##################################################################"
     echo "####    $@"
-    echo "##################################################################"
     echo "##################################################################"
     echo ""
 }
@@ -48,15 +55,14 @@ function fInfo()
     printf "##################################################################\n"
     printf "####    %s\t: %s\n" "REPO" "${CONFIG_DOCKER_REPO}"
     printf "####    %s\t: %s\n" "TAG" "${CONFIG_DOCKER_TAG}"
-    printf "####    %s\t: %s\n" "USER" "${CONFIG_DOCKER_USER}"
+    printf "####    %s\t: %s\n" "USER" "${VAR_USER_NAME}"
+
+    printf "####    %s\t: %s\n" "Base Image" "${VAR_BASE_IMAGE}:${VAR_BASE_IMAGE_TAG}"
     printf "##################################################################\n"
 
 }
-function fBuild()
+function fSetup_buildfolder()
 {
-    fPrint_title "Build"
-    echo "docker build --file ${VAR_DEF_DOCKER_FILE} --tag ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG} ."
-
     # env setup
     if test -d ${VAR_BUILD_PATH}
     then
@@ -66,6 +72,37 @@ function fBuild()
     cp -rf "${VAR_TOOLS_PATH}"/* "${VAR_BUILD_PATH}/"
     cp -f "${VAR_EXPERIMENT_SCRIPT}" "${VAR_BUILD_PATH}/experiment.sh"
     echo '[Checkpoint] Setup env'
+
+}
+function fSetup_dockerfile()
+{
+
+    echo "## base image"                                                                                            >> ${VAR_DEF_DOCKER_FILE}
+    echo "FROM ${VAR_BASE_IMAGE}:${VAR_BASE_IMAGE_TAG}"                                                             >> ${VAR_DEF_DOCKER_FILE}
+    echo ""                                                                                                         >> ${VAR_DEF_DOCKER_FILE}
+    echo "## MAINTAINER"                                                                                            >> ${VAR_DEF_DOCKER_FILE}
+    echo "MAINTAINER ${VAR_MAINTAINER}"                                                                             >> ${VAR_DEF_DOCKER_FILE}
+    echo "#######################################################"                                                  >> ${VAR_DEF_DOCKER_FILE}
+    echo "##    System settings"                                                                                    >> ${VAR_DEF_DOCKER_FILE}
+    echo "#######################################################"                                                  >> ${VAR_DEF_DOCKER_FILE}
+    echo "ADD build /root/tools"                                                                                    >> ${VAR_DEF_DOCKER_FILE}
+    echo "RUN bash /root/tools/setup.sh --distro ${VAR_BASE_IMAGE} --user ${VAR_USER_NAME} --pass ${VAR_USER_PASS}" >> ${VAR_DEF_DOCKER_FILE}
+    echo "RUN bash /root/tools/experiment.sh"                                                                       >> ${VAR_DEF_DOCKER_FILE}
+    echo ""                                                                                                         >> ${VAR_DEF_DOCKER_FILE}
+    echo "#######################################################"                                                  >> ${VAR_DEF_DOCKER_FILE}
+    echo "##    Finalize Docker Setting"                                                                            >> ${VAR_DEF_DOCKER_FILE}
+    echo "#######################################################"                                                  >> ${VAR_DEF_DOCKER_FILE}
+    echo "USER ${VAR_USER_NAME}"                                                                                    >> ${VAR_DEF_DOCKER_FILE}
+    echo "WORKDIR /home/${VAR_USER_NAME}"                                                                           >> ${VAR_DEF_DOCKER_FILE}
+    echo "ENV USER ${VAR_USER_NAME}"                                                                                >> ${VAR_DEF_DOCKER_FILE}
+}
+function fBuild()
+{
+    fPrint_title "Build"
+    echo "docker build --file ${VAR_DEF_DOCKER_FILE} --tag ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG} ."
+
+    fSetup_buildfolder
+    fSetup_dockerfile
 
     # docker build --file ${VAR_DEF_DOCKER_FILE} --tag "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
     docker build --file ${VAR_DEF_DOCKER_FILE} -t "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
@@ -79,8 +116,8 @@ function fRun()
         var_addictional_cmd+=("-v ${VAR_HOST_PASTHROUGH_PATH}:${VAR_CONTAINER_PASTHROUGH_PATH}")
     fi
     # --rm                             Automatically remove the container when it exits
-    echo docker run -it ${var_addictional_cmd[@]} --rm -u ${CONFIG_DOCKER_USER} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
-    docker run -it ${var_addictional_cmd[@]} --rm -u ${CONFIG_DOCKER_USER} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
+    echo docker run -it ${var_addictional_cmd[@]} --rm -u ${VAR_USER_NAME} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
+    docker run -it ${var_addictional_cmd[@]} --rm -u ${VAR_USER_NAME} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
 }
 function fCommit()
 {
@@ -124,6 +161,7 @@ function fHelp()
     printf "    %s\t %s\n" "--clean|clean" "remove none image"
     printf "    %s\t %s\n" "-e|--experiment|exp" "remove test docker"
 
+    printf "[Runtime Config]\n"
     printf "    %s\t %s\n" "-d|--disk|disk" "pass folder as disk on container"
     printf "[Shortcuts]\n"
     printf "    %s\t %s\n" "ls" "list all images"
@@ -174,14 +212,6 @@ function fMain()
                 var_container_instance=$2
                 shift 1
                 ;;
-            -d|--disk)
-                tmp_path=$2
-                if [ -d "${tmp_path}" ]
-                then
-                    VAR_HOST_PASTHROUGH_PATH=$(realpath ${tmp_path})
-                fi
-                shift 1
-                ;;
             --remove|remove)
                 flag_rm=y
                 ;;
@@ -198,18 +228,34 @@ function fMain()
                 fi
                 shift 1
                 ;;
+            ## Build configs
+            ## Runtime Options
+            -d|--disk)
+                tmp_path=$2
+                if [ -d "${tmp_path}" ]
+                then
+                    VAR_HOST_PASTHROUGH_PATH=$(realpath ${tmp_path})
+                fi
+                shift 1
+                ;;
+            ## Shortcuts
             ls)
                 docker images
                 return 0
                 ;;
+            ## Env
             --android|android|an)
                 CONFIG_DOCKER_REPO="android"
                 CONFIG_DOCKER_TAG="1.0"
+                VAR_BASE_IMAGE="ubuntu"
+                VAR_BASE_IMAGE_TAG="18.04"
                 VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/android.sh"
                 ;;
             --linux|linux)
                 CONFIG_DOCKER_REPO="linux"
                 CONFIG_DOCKER_TAG="1.0"
+                VAR_BASE_IMAGE="ubuntu"
+                VAR_BASE_IMAGE_TAG="18.04"
                 VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/linux.sh"
                 ;;
             -h|--help)
@@ -235,6 +281,10 @@ function fMain()
     then
         fClean
     fi
+    if [ "${flag_rm}" = "y" ]
+    then
+        fRemove
+    fi
 
     if [ "${flag_build}" = "y" ]
     then
@@ -244,10 +294,7 @@ function fMain()
     then
         fRun
     fi
-    if [ "${flag_rm}" = "y" ]
-    then
-        fRemove
-    fi
+
     if [ "${flag_commit}" = "y" ]
     then
         fCommit ${var_container_instance}

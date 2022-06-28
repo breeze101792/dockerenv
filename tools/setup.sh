@@ -1,7 +1,23 @@
+#!/binash
+##################################################################
+####    config
+##################################################################
 CONFIG_USER_NAME="docker"
 CONFIG_USER_PASSWD="123456"
+
+##################################################################
+####    Function
+##################################################################
+function fPrint_title()
+{
+    echo "##################################################################"
+    echo "####    $@"
+    echo "##################################################################"
+    echo ""
+}
 function fUser_setup()
 {
+    fPrint_title "User Setup"
     local var_home_path="/home/${CONFIG_USER_NAME}"
     #######################################################
     ##    Accound settings
@@ -21,6 +37,7 @@ function fUser_setup()
 }
 function fUbuntu()
 {
+    fPrint_title "Ubuntu Setup"
     # Update system
     apt-get update
     #  apt-get upgrade -y
@@ -42,16 +59,22 @@ function fUbuntu()
 function fMain()
 {
     echo "Docker setup"
-    local flag_ubuntu=n
+    local flag_distro='ubuntu'
     local flag_account=y
     while [[ ${#} > 0 ]]
     do
         case ${1} in
-            --ubuntu)
-                flag_ubuntu=y
+            --distro)
+                echo 1
+                flag_distro="$2"
+                shift 1
                 ;;
             --user)
                 CONFIG_USER_NAME=${2}
+                shift 1
+                ;;
+            --pass)
+                CONFIG_USER_PASSWD=${2}
                 shift 1
                 ;;
             -h|--help)
@@ -59,7 +82,7 @@ function fMain()
                 exit 0
                 ;;
             *)
-                echo "Unknown Args"
+                echo "Unknown Args: $@"
                 fHelp
                 exit 1
                 ;;
@@ -67,7 +90,7 @@ function fMain()
         shift 1
     done
 
-    if [ "${flag_ubuntu}" = "y" ]
+    if [ "${flag_distro}" = "ubuntu" ]
     then
         fUbuntu
     fi
