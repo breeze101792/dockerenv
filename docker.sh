@@ -8,7 +8,13 @@ CONFIG_DOCKER_TAG="1.0"
 ##################################################################
 ####    Path Variables
 ##################################################################
-VAR_ROOT_PATH="${PWD}"
+if [ -n "${BASH_SOURCE}" ] && [ -f "$(dirname ${BASH_SOURCE[0]})/docker.sh" ] 
+then
+    # bash
+    VAR_ROOT_PATH="$(dirname ${BASH_SOURCE[0]})"
+else
+    VAR_ROOT_PATH="${PWD}"
+fi
 VAR_TOOLS_PATH="${VAR_ROOT_PATH}/tools"
 VAR_BUILD_PATH="${VAR_ROOT_PATH}/build"
 
@@ -61,6 +67,20 @@ function fInfo()
     printf "##################################################################\n"
 
 }
+function fGetImageID()
+{
+    local var_repo=$1
+    local var_tag=$2
+
+    local var_imgid=$(docker images | grep ${var_repo} | grep ${var_tag}  | tr -s ' ' | cut -d ' ' -f 3)
+    if [ "${var_imgid}" != "" ]
+    then
+        echo ${var_imgid}
+        return 0
+    else
+        return -1
+    fi
+}
 function fSetup_buildfolder()
 {
     # env setup
@@ -101,8 +121,18 @@ function fBuild()
     fPrint_title "Build"
     echo "docker build --file ${VAR_DEF_DOCKER_FILE} --tag ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG} ."
 
+    # echo fGetImageID ${CONFIG_DOCKER_REPO} ${CONFIG_DOCKER_TAG}
+    fGetImageID ${CONFIG_DOCKER_REPO} ${CONFIG_DOCKER_TAG}
+    if [ "${?}" = "0" ]
+    then
+        echo "Image already found on docker image"
+        exit -1
+    fi
+
     fSetup_buildfolder
     fSetup_dockerfile
+
+    echo "Start building Container"
 
     # docker build --file ${VAR_DEF_DOCKER_FILE} --tag "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
     docker build --file ${VAR_DEF_DOCKER_FILE} -t "${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}" .
