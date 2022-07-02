@@ -20,18 +20,22 @@ VAR_BUILD_PATH="${VAR_ROOT_PATH}/build"
 
 VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/default.sh"
 VAR_HOST_PASTHROUGH_PATH=""
-VAR_CONTAINER_PASTHROUGH_PATH="/mnt/work"
 VAR_DEF_DOCKER_FILE="${VAR_BUILD_PATH}/Dockerfile"
 
 ##################################################################
 ####    Docker file Variables
 ##################################################################
+VAR_BASE_DISTRO="ubuntu"
 VAR_BASE_IMAGE="ubuntu"
 VAR_BASE_IMAGE_TAG="18.04"
 
 VAR_MAINTAINER="breeze101792@gmail.com"
 VAR_USER_NAME="docker"
 VAR_USER_PASS="123456"
+##################################################################
+####    Runtime Variables
+##################################################################
+VAR_CONTAINER_PASTHROUGH_PATH="/home/${VAR_USER_NAME}/project"
 
 ##################################################################
 ##################################################################
@@ -43,7 +47,6 @@ function fPrint_title()
     echo "##################################################################"
     echo "####    $@"
     echo "##################################################################"
-    echo ""
 }
 function fError_check()
 {
@@ -106,7 +109,7 @@ function fSetup_dockerfile()
     echo "##    System settings"                                                                                    >> ${VAR_DEF_DOCKER_FILE}
     echo "#######################################################"                                                  >> ${VAR_DEF_DOCKER_FILE}
     echo "ADD build /root/tools"                                                                                    >> ${VAR_DEF_DOCKER_FILE}
-    echo "RUN bash /root/tools/setup.sh --distro ${VAR_BASE_IMAGE} --user ${VAR_USER_NAME} --pass ${VAR_USER_PASS}" >> ${VAR_DEF_DOCKER_FILE}
+    echo "RUN bash /root/tools/setup.sh --distro ${VAR_BASE_DISTRO} --user ${VAR_USER_NAME} --pass ${VAR_USER_PASS}" >> ${VAR_DEF_DOCKER_FILE}
     echo "RUN bash /root/tools/experiment.sh"                                                                       >> ${VAR_DEF_DOCKER_FILE}
     echo ""                                                                                                         >> ${VAR_DEF_DOCKER_FILE}
     echo "#######################################################"                                                  >> ${VAR_DEF_DOCKER_FILE}
@@ -145,9 +148,16 @@ function fRun()
     then
         var_addictional_cmd+=("-v ${VAR_HOST_PASTHROUGH_PATH}:${VAR_CONTAINER_PASTHROUGH_PATH}")
     fi
+    # connect x socket for launching gui program
+    if test -n ${DISPLAY}
+    then
+        var_addictional_cmd+=("-e DISPLAY=$DISPLAY")
+        var_addictional_cmd+=("-v /tmp/.X11-unix/:/tmp/.X11-unix/")
+    fi
     # --rm                             Automatically remove the container when it exits
     echo docker run -it ${var_addictional_cmd[@]} --rm -u ${VAR_USER_NAME} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
-    docker run -it ${var_addictional_cmd[@]} --rm -u ${VAR_USER_NAME} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
+    docker run -it ${var_addictional_cmd[@]} -h ${CONFIG_DOCKER_REPO} --rm -u ${VAR_USER_NAME} ${CONFIG_DOCKER_REPO}:${CONFIG_DOCKER_TAG}
+    # "docker run --cpus=13 -it --rm --name android_builder -v /mnt/projects/android:/home/docker/android -u docker android_builder:v1.0 /bin/bash"
 }
 function fCommit()
 {
@@ -210,6 +220,7 @@ function fHelp_Docker()
 {
     printf "[Docker Original Commands]\n"
     printf "    %s\t %s\n" "Rename Image" "docker image tag server:latest myname/server:latest"
+    printf "    %s\t %s\n" "Search offical Image" "docker search ubuntu -f is-official=true"
     return 0
 }
 function fMain()
@@ -277,6 +288,7 @@ function fMain()
             --android|android|an)
                 CONFIG_DOCKER_REPO="android"
                 CONFIG_DOCKER_TAG="1.0"
+                VAR_BASE_DISTRO="ubuntu"
                 VAR_BASE_IMAGE="ubuntu"
                 VAR_BASE_IMAGE_TAG="18.04"
                 VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/android.sh"
@@ -284,24 +296,47 @@ function fMain()
             --linux|linux)
                 CONFIG_DOCKER_REPO="linux"
                 CONFIG_DOCKER_TAG="1.0"
+                VAR_BASE_DISTRO="ubuntu"
                 VAR_BASE_IMAGE="ubuntu"
                 VAR_BASE_IMAGE_TAG="18.04"
                 VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/linux.sh"
+                ;;
+            --fpga|fpga)
+                CONFIG_DOCKER_REPO="fpga"
+                CONFIG_DOCKER_TAG="1.0"
+                VAR_BASE_DISTRO="ubuntu"
+                VAR_BASE_IMAGE="ubuntu"
+                VAR_BASE_IMAGE_TAG="22.04"
+                VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/fpga.sh"
+                ;;
+            --hack|hack)
+                CONFIG_DOCKER_REPO="hack"
+                CONFIG_DOCKER_TAG="1.0"
+                VAR_BASE_DISTRO="kali"
+                VAR_BASE_IMAGE="kalilinux/kali-rolling"
+                VAR_BASE_IMAGE_TAG="latest"
+                # VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/fpga.sh"
                 ;;
             -h|--help)
                 fHelp
                 exit 0
                 ;;
             *)
-                echo "Unknown Args"
+                echo "Unknown Args: $@"
                 fHelp
                 exit 1
                 ;;
         esac
         shift 1
     done
+    pushd ${VAR_ROOT_PATH}
 
     fInfo
+
+    if [ "${flag_commit}" = "y" ]
+    then
+        fCommit ${var_container_instance}
+    fi
 
     if [ "${flag_prune}" = "y" ]
     then
@@ -315,19 +350,15 @@ function fMain()
     then
         fRemove
     fi
-
     if [ "${flag_build}" = "y" ]
     then
         fBuild
     fi
+
     if [ "${flag_run}" = "y" ]
     then
         fRun
     fi
-
-    if [ "${flag_commit}" = "y" ]
-    then
-        fCommit ${var_container_instance}
-    fi
+    popd
 }
 fMain $@
