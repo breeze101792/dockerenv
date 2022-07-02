@@ -60,6 +60,14 @@ function fUbuntu()
     apt-get install -y sudo build-essential
     apt-get install -y tmux vim git
 }
+function fArchlinux()
+{
+    fPrint_title "Archlinux Setup"
+    # Update system
+    pacman -Syyu --noconfirm
+    pacman -S --noconfirm base-devel sudo
+    pacman -S --noconfirm vim git
+}
 function fKali()
 {
     fPrint_title "Kali Setup"
@@ -112,10 +120,14 @@ function fMain()
     if [ "${flag_distro}" = "ubuntu" ]
     then
         fUbuntu
+    elif [ "${flag_distro}" = "archlinux" ]
+    then
+        fArchlinux
     elif [ "${flag_distro}" = "kali" ]
     then
         fKali
     fi
+
     ## Post settings
     if [ "${flag_account}" = "y" ]
     then

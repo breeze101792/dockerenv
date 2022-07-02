@@ -317,6 +317,14 @@ function fMain()
                 VAR_BASE_IMAGE_TAG="latest"
                 # VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/fpga.sh"
                 ;;
+            --arch|arch)
+                CONFIG_DOCKER_REPO="arch"
+                CONFIG_DOCKER_TAG="1.0"
+                VAR_BASE_DISTRO="archlinux"
+                VAR_BASE_IMAGE="archlinux"
+                VAR_BASE_IMAGE_TAG="latest"
+                # VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/fpga.sh"
+                ;;
             -h|--help)
                 fHelp
                 exit 0
