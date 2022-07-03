@@ -210,9 +210,10 @@ function fHelp()
     printf "    %s\t %s\n" "--linux|linux" "Config for linux build env"
     printf "[Others]\n"
     printf "    %s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
-    printf "[Example]\n"
+    printf "[Note.]\n"
     printf "    %s\t %s\n" "Build android env" "docker.sh android -b"
     printf "    %s\t %s\n" "Running android env" "docker.sh android -r"
+    printf "    %s\t %s\n" "Binding storage to another folder" "sudo mount --rbind /mnt/docker /var/lib/docker"
     fHelp_Docker
     return 0
 }
