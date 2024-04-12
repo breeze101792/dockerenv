@@ -22,6 +22,7 @@ VAR_EXPERIMENT_SCRIPT="${VAR_ROOT_PATH}/experiment/default.sh"
 VAR_HOST_PASTHROUGH_PATH=""
 VAR_DEF_DOCKER_FILE="${VAR_BUILD_PATH}/Dockerfile"
 
+VAR_HELP_SUPPORT_ENV=()
 ##################################################################
 ####    Docker file Variables
 ##################################################################
@@ -189,39 +190,48 @@ function fClean()
     done
 
 }
+function fUpdateTools()
+{
+    local var_src_tools=~/tools
+    VAR_TOOLS_PATH="${VAR_ROOT_PATH}/tools"
+    cp -f $var_src_tools//shellscripts/tools/hslite/hslite.sh ${VAR_TOOLS_PATH}/bashrc
+    cp -f $var_src_tools/vim-ide/tools/vimlite.vim ${VAR_TOOLS_PATH}/vimrc
+}
 function fHelp()
 {
     printf "Script\n"
     printf "[Options]\n"
-    printf "    %s\t %s\n" "-b|--build|build" "build test docker"
-    printf "    %s\t %s\n" "-r|--run|run" "run test docker"
-    printf "    %s\t %s\n" "-c|--commit|commit" "commit container changes, ex. -c [container id]"
-    printf "    %s\t %s\n" "-p|--prune|prune" "Clean system caced"
-    printf "    %s\t %s\n" "--remove|remove" "remove test docker"
-    printf "    %s\t %s\n" "--clean|clean" "remove none image"
-    printf "    %s\t %s\n" "-e|--experiment|exp" "remove test docker"
+    printf "    %- 32s\t %s\n" "-b|--build|build" "build test docker"
+    printf "    %- 32s\t %s\n" "-r|--run|run" "run test docker"
+    printf "    %- 32s\t %s\n" "-c|--commit|commit" "commit container changes, ex. -c [container id]"
+    printf "    %- 32s\t %s\n" "-p|--prune|prune" "Clean system caced"
+    printf "    %- 32s\t %s\n" "--remove|remove" "remove test docker"
+    printf "    %- 32s\t %s\n" "--clean|clean" "remove none image"
+    printf "    %- 32s\t %s\n" "-e|--experiment|exp" "remove test docker"
+    printf "    %- 32s\t %s\n" "--update-tools" "update tools on system"
 
     printf "[Runtime Config]\n"
-    printf "    %s\t %s\n" "-d|--disk|disk" "pass folder as disk on container"
+    printf "    %- 32s\t %s\n" "-d|--disk|disk" "pass folder as disk on container"
     printf "[Shortcuts]\n"
-    printf "    %s\t %s\n" "ls" "list all images"
+    printf "    %- 32s\t %s\n" "ls" "list all images"
     printf "[Environment]\n"
-    printf "    %s\t %s\n" "--android|android|an" "Config for android build env"
-    printf "    %s\t %s\n" "--linux|linux" "Config for linux build env"
+    printf "    %- 32s\t %s\n" "--android|android|an" "Config for android build env"
+    printf "    %- 32s\t %s\n" "--linux|linux" "Config for linux build env"
+    printf "    %- 32s\t %s\n" "Other env: ${VAR_HELP_SUPPORT_ENV[*]}" "Other config for linux build env"
     printf "[Others]\n"
-    printf "    %s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
+    printf "    %- 32s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
     printf "[Note.]\n"
-    printf "    %s\t %s\n" "Build android env" "docker.sh android -b"
-    printf "    %s\t %s\n" "Running android env" "docker.sh android -r"
-    printf "    %s\t %s\n" "Binding storage to another folder" "sudo mount --rbind /mnt/docker /var/lib/docker"
+    printf "    %- 32s\t %s\n" "Build android env" "docker.sh android -b"
+    printf "    %- 32s\t %s\n" "Running android env" "docker.sh android -r"
+    printf "    %- 32s\t %s\n" "Binding storage to another folder" "sudo mount --rbind /mnt/docker /var/lib/docker"
     fHelp_Docker
     return 0
 }
 function fHelp_Docker()
 {
     printf "[Docker Original Commands]\n"
-    printf "    %s\t %s\n" "Rename Image" "docker image tag server:latest myname/server:latest"
-    printf "    %s\t %s\n" "Search offical Image" "docker search ubuntu -f is-official=true"
+    printf "    %- 32s\t %s\n" "Rename Image" "docker image tag server:latest myname/server:latest"
+    printf "    %- 32s\t %s\n" "Search offical Image" "docker search ubuntu -f is-official=true"
     return 0
 }
 function fMain()
@@ -236,10 +246,13 @@ function fMain()
 
     local var_container_instance=""
 
-
+    VAR_HELP_SUPPORT_ENV+=("linux" "fpga" "hack" "arch" "android")
     while [[ ${#} > 0 ]]
     do
         case ${1} in
+            --update-tools)
+                fUpdateTools
+                ;;
             -b|--build|build)
                 flag_build=y
                 ;;
