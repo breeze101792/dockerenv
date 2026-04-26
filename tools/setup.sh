@@ -5,6 +5,8 @@
 CONFIG_USER_NAME="docker"
 CONFIG_USER_PASSWD="123456"
 
+CONFIG_TOOL_PATH="/tools"
+
 ##################################################################
 ####    Function
 ##################################################################
@@ -22,7 +24,7 @@ function fUser_setup()
     #######################################################
     ##    Setup System Env
     #######################################################
-    ln -s /usr/share/zoneinfo/Asia/Taipei /etc/localtime
+    ln -sf /usr/share/zoneinfo/Asia/Taipei /etc/localtime
     # use base as sh instead of dash
     ln -sf /bin/bash /bin/sh
 
@@ -43,58 +45,23 @@ function fUser_setup()
     #######################################################
     ##    Setup User Env
     #######################################################
-    cp -rf /root/tools ${var_home_path}/tools
+    mkdir -p ${var_home_path}/tools/
+    cp -rf ${CONFIG_TOOL_PATH}/setup/bashrc ${var_home_path}/tools/
+    cp -rf ${CONFIG_TOOL_PATH}/setup/vimrc ${var_home_path}/tools/
     chown ${CONFIG_USER_NAME}:${CONFIG_USER_NAME} ${var_home_path}/tools
     ln -sf ${var_home_path}/tools/vimrc ${var_home_path}/.vimrc
     echo "source ${var_home_path}/tools/bashrc" >> ${var_home_path}/.bashrc
 }
-function fUbuntu()
-{
-    fPrint_title "Ubuntu Setup"
-    # Update system
-    apt-get update
-    apt-get upgrade -y
-
-    # Install require pkg
-    apt-get install -y apt-utils
-    apt-get install -y sudo build-essential
-    apt-get install -y tmux vim git
-}
-function fArchlinux()
-{
-    fPrint_title "Archlinux Setup"
-    # Update system
-    pacman -Syyu --noconfirm
-    pacman -S --noconfirm base-devel sudo
-    pacman -S --noconfirm vim git
-}
-function fKali()
-{
-    fPrint_title "Kali Setup"
-    # Update system
-    apt-get update
-    apt-get upgrade -y
-
-    # Install require pkg
-    # apt-get install -y apt-utils
-    # apt-get install -y sudo build-essential
-    apt-get install -y tmux vim git tmux
-    apt-get install -y nmap man-db exploitdb
-    apt-get install -y kali-linux kali-linux-all kali-linux-forensic kali-linux-full kali-linux-gpu kali-linux-pwtools kali-linux-rfid kali-linux-sdr kali-linux-top10 kali-linux-voip kali-linux-web kali-linux-wireless
-}
 
 function fMain()
 {
-    echo "Docker setup"
-    local flag_distro='ubuntu'
-    local flag_account=y
+    echo "Linux setup"
+    local flag_account=n
     while [[ ${#} > 0 ]]
     do
         case ${1} in
-            --distro)
-                echo 1
-                flag_distro="$2"
-                shift 1
+            --account)
+                flag_account=y
                 ;;
             --user)
                 CONFIG_USER_NAME=${2}
@@ -102,6 +69,10 @@ function fMain()
                 ;;
             --pass)
                 CONFIG_USER_PASSWD=${2}
+                shift 1
+                ;;
+            --tools)
+                CONFIG_TOOL_PATH=${2}
                 shift 1
                 ;;
             -h|--help)
@@ -116,17 +87,6 @@ function fMain()
         esac
         shift 1
     done
-
-    if [ "${flag_distro}" = "ubuntu" ]
-    then
-        fUbuntu
-    elif [ "${flag_distro}" = "archlinux" ]
-    then
-        fArchlinux
-    elif [ "${flag_distro}" = "kali" ]
-    then
-        fKali
-    fi
 
     ## Post settings
     if [ "${flag_account}" = "y" ]

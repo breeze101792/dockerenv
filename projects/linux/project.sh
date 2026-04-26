@@ -1,6 +1,6 @@
 #!/bin/bash
 printf "##################################################################\n"
-printf "##  Linux Experiment Environment Setup\n"
+printf "##  Linux Project Environment Setup\n"
 printf "##################################################################\n"
 function fPrepare()
 {
@@ -23,7 +23,7 @@ function fLinux()
 }
 function fHelp()
 {
-    printf "Linux Experiment Env\n"
+    printf "Linux Project Env\n"
     printf "[Options]\n"
     printf "    %s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
     return 0
@@ -51,5 +51,4 @@ function fMain()
     fLinux
     fFinalize
 }
-
 fMain $@

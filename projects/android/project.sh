@@ -1,6 +1,6 @@
 #!/bin/bash
 printf "##################################################################\n"
-printf "##  Andnroid Experiment Environment Setup\n"
+printf "##  Android Project Environment Setup\n"
 printf "##################################################################\n"
 function fPrepare()
 {
@@ -13,7 +13,7 @@ function fPrepare()
 function fAndroid()
 {
     printf "##################################################################\n"
-    printf "## Andronid AOSP Setup\n"
+    printf "## Android AOSP Setup\n"
     printf "##################################################################\n"
 
     ## Android Require Package
@@ -31,7 +31,7 @@ function fLineageos()
 }
 function fHelp()
 {
-    printf "Android Experiment Env\n"
+    printf "Android Project Env\n"
     printf "[Options]\n"
     printf "    %s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
     return 0

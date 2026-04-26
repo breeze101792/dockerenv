@@ -1,29 +1,51 @@
-# README #
+# dockerenv
 
-This README would normally document whatever steps are necessary to get your application up and running.
+Docker environment builder for development workspaces.
 
-### What is this repository for? ###
+## Structure
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+```
+.
+├── ducky.sh              # Main build/run script
+├── tools/                # Base system setup
+│   ├── distro.sh         # Distro-specific setup
+│   ├── setup.sh          # User & system config
+│   ├── bashrc            # Shell config
+│   └── vimrc             # Vim config
+└── projects/             # Project-specific environments
+    ├── default/
+    ├── android/
+    ├── fpga/
+    └── linux/
+```
 
-### How do I get set up? ###
+## Projects
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+Each project folder contains:
 
-### Contribution guidelines ###
+| File | Purpose |
+|------|---------|
+| `profile.sh` | Docker image config (repo, tag, base distro) |
+| `project.sh` | Project-specific packages & setup |
+| `bootstrap.sh` | Container bootstrap hook |
+| `entrypoint.sh` | Container shell launcher |
 
-* Writing tests
-* Code review
-* Other guidelines
+## Usage
 
-### Who do I talk to? ###
+```bash
+# Generate docker files
+./ducky.sh android -g
 
-* Repo owner or admin
-* Other community or team contact
+# Build
+./ducky.sh android -b
+
+# Run
+./ducky.sh android -r
+
+# With workdir mount
+./ducky.sh android -r -w /path/to/project
+```
+
+## Base System Setup Flow
+
+`distro.sh` → `setup.sh` → `project.sh` → `entrypoint.sh`
