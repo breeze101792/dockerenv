@@ -6,13 +6,17 @@
 ##################################################################
 ####    Path Variables
 ##################################################################
-if [ -n "${BASH_SOURCE}" ] && [ -f "$(dirname ${BASH_SOURCE[0]})/ducky.sh" ] 
-then
-    # bash
-    tmp_script_dir="$(dirname ${BASH_SOURCE[0]})"
-    VAR_ROOT_PATH="$(realpath ${tmp_script_dir})"
+if [ -n "${BASH_SOURCE[0]}" ]; then
+    VAR_ROOT_PATH=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
+elif [ -n "${ZSH_VERSION}" ]; then
+    VAR_ROOT_PATH=$(dirname "$(realpath "${(%):-%x}")")
 else
-    VAR_ROOT_PATH="$(realpath ${PWD})"
+    VAR_ROOT_PATH=$(dirname "$(realpath "$0")")
+fi
+
+# Fallback to PWD if script path detection fails
+if [ ! -d "${VAR_ROOT_PATH}" ]; then
+    VAR_ROOT_PATH="$(realpath "${PWD}")"
 fi
 
 # path config
@@ -41,7 +45,7 @@ DOCKER_CONFIG_DOCKER_TAG="1.0"
 ##    Var config
 DOCKER_VAR_BASE_DISTRO="ubuntu"
 DOCKER_VAR_BASE_IMAGE="ubuntu"
-DOCKER_VAR_BASE_IMAGE_TAG="18.04"
+DOCKER_VAR_BASE_IMAGE_TAG="24.04"
 
 DOCKER_VAR_MAINTAINER="breeze101792@gmail.com"
 DOCKER_VAR_USER_NAME="docker"
@@ -49,7 +53,8 @@ DOCKER_VAR_USER_PASS="123456"
 ##################################################################
 ####    Runtime Variables
 ##################################################################
-VAR_WORKDIRP_PATH="/workdir"
+VAR_RUNTIME_WORKDIRP_PATH="/workdir"
+VAR_RUNTIME_DEVICE_PASSTHROUGH=""
 
 ##################################################################
 ##################################################################
@@ -212,8 +217,14 @@ function fRun()
     local var_addictional_cmd=()
     if [ -n "${VAR_WORKPROJECT_PATH}" ]
     then
-        var_addictional_cmd+=("-v ${VAR_WORKPROJECT_PATH}:${VAR_WORKDIRP_PATH}")
+        var_addictional_cmd+=("-v ${VAR_WORKPROJECT_PATH}:${VAR_RUNTIME_WORKDIRP_PATH}")
     fi
+    # TODO, need to verify this.
+    if [ -n "${VAR_RUNTIME_DEVICE_PASSTHROUGH}" ]
+    then
+        var_addictional_cmd+=("--device ${VAR_RUNTIME_DEVICE_PASSTHROUGH}")
+    fi
+
     # connect x socket for launching gui program
     if test -n ${DISPLAY}
     then
@@ -311,7 +322,7 @@ function fMain()
 
     local var_container_instance=""
 
-    VAR_HELPER_SUPPORT_PROJECTS+=("linux" "fpga" "arch" "android")
+    VAR_HELPER_SUPPORT_PROJECTS+=("linux" "fpga" "arch" "android" "zephyr")
     while [[ ${#} > 0 ]]
     do
         case ${1} in
@@ -362,6 +373,14 @@ function fMain()
                 if [ -d "${tmp_path}" ]
                 then
                     VAR_WORKPROJECT_PATH=$(realpath ${tmp_path})
+                fi
+                shift 1
+                ;;
+            -d|--device|device)
+                tmp_device_path=$2
+                if [ -e "${tmp_device_path}" ]
+                then
+                    VAR_RUNTIME_DEVICE_PASSTHROUGH=$(realpath ${tmp_device_path})
                 fi
                 shift 1
                 ;;
