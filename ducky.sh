@@ -183,8 +183,16 @@ function fGetImageID()
 {
     local var_repo=$1
     local var_tag=$2
+    local var_imgid
 
-    local var_imgid=$(docker images | grep ${var_repo} | grep ${var_tag}  | tr -s ' ' | cut -d ' ' -f 3)
+    if [[ "$(uname)" == "Darwin" ]]; then
+        # mac
+        var_imgid=$(docker images | grep ${var_repo} | grep ${var_tag}  | tr -s ' ' | cut -d ' ' -f 2)
+    else
+        # linux
+        var_imgid=$(docker images | grep ${var_repo} | grep ${var_tag}  | tr -s ' ' | cut -d ' ' -f 3)
+    fi
+
     if [ "${var_imgid}" != "" ]
     then
         echo ${var_imgid}
@@ -248,12 +256,12 @@ function fCommit()
 function fRemove()
 {
     fPrint_title "Remove"
-    local var_imgid=$(docker images | grep ${DOCKER_CONFIG_DOCKER_REPO} | grep ${DOCKER_CONFIG_DOCKER_TAG}  | tr -s ' ' | cut -d ' ' -f 2)
-    if [ "${var_imgid}" != "" ]
+    local var_imgid=$(fGetImageID ${DOCKER_CONFIG_DOCKER_REPO} ${DOCKER_CONFIG_DOCKER_TAG})
+    if [ "${?}" = "0" ] && [ "${var_imgid}" != "" ]
     then
         echo "docker image rm ${var_imgid}"
-        eval "docker image rm ${var_imgid}"
-        eval "docker images"
+        docker image rm ${var_imgid}
+        docker images
     fi
 }
 function fClean()

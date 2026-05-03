@@ -19,6 +19,7 @@ function fLinux()
     printf "##################################################################\n"
     printf "## Linux Setup\n"
     printf "##################################################################\n"
+    apt-get build-dep linux
     apt-get install -y git fakeroot build-essential ncurses-dev xz-utils libssl-dev bc flex libelf-dev bison
 }
 function fHelp()
