@@ -2,8 +2,11 @@
 ##################################################################
 ####    config
 ##################################################################
-CONFIG_USER_NAME="docker"
+CONFIG_USER_NAME="ducky"
+CONFIG_GROUP_NAME="ducky"
 CONFIG_USER_PASSWD="123456"
+CONFIG_HOST_UID="1000"
+CONFIG_HOST_GID="1000"
 
 CONFIG_TOOL_PATH="/tools"
 
@@ -31,16 +34,36 @@ function fUser_setup()
     #######################################################
     ##    Accound settings
     #######################################################
-    # Add user
-    groupadd wheel
-    useradd -G wheel -d ${var_home_path} -m ${CONFIG_USER_NAME}
+    # Remove original account
+    echo "Checking UID:${CONFIG_HOST_UID}/GID:${CONFIG_HOST_GID}"
+    # Check if UID ${CONFIG_HOST_UID} exists
+    if getent passwd ${CONFIG_HOST_UID} > /dev/null; then
+        echo "UID ${CONFIG_HOST_UID} exists. Deleting..."
+        userdel -r $(getent passwd ${CONFIG_HOST_UID} | cut -d: -f1)
+    # else
+    #     echo "UID ${CONFIG_HOST_UID} does not exist."
+    fi
+
+    # Check if GID ${CONFIG_HOST_GID} exists
+    if getent group ${CONFIG_HOST_GID} > /dev/null; then
+        echo "GID ${CONFIG_HOST_GID} exists. Deleting..."
+        groupdel $(getent group ${CONFIG_HOST_GID} | cut -d: -f1)
+    # else
+    #     echo "GID ${CONFIG_HOST_GID} does not exist."
+    fi
+    
+    # Add user account
+    groupadd ${CONFIG_GROUP_NAME} -g ${CONFIG_HOST_GID}
+    useradd -g ${CONFIG_GROUP_NAME} -d ${var_home_path} -u ${CONFIG_HOST_UID} -m ${CONFIG_USER_NAME}
     echo ${CONFIG_USER_NAME}:${CONFIG_USER_PASSWD} | chpasswd
 
     # setup sudo
-    # group 
-    echo "%wheel  ALL=(ALL)       ALL" >> /etc/sudoers
-    # for user
-    echo "${CONFIG_USER_NAME}  ALL=(ALL)       ALL" >> /etc/sudoers
+    if command -v "sudo"; then
+        # group
+        echo "%${CONFIG_GROUP_NAME}  ALL=(ALL)       ALL" >> /etc/sudoers
+        # user
+        echo "${CONFIG_USER_NAME}  ALL=(ALL)       ALL" >> /etc/sudoers
+    fi
 
     #######################################################
     ##    Setup User Env
@@ -65,6 +88,18 @@ function fMain()
                 ;;
             --user)
                 CONFIG_USER_NAME=${2}
+                shift 1
+                ;;
+            --group)
+                CONFIG_GROUP_NAME=${2}
+                shift 1
+                ;;
+            --uid)
+                CONFIG_HOST_UID=${2}
+                shift 1
+                ;;
+            --gid)
+                CONFIG_HOST_GID=${2}
                 shift 1
                 ;;
             --pass)

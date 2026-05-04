@@ -89,6 +89,8 @@ function fMain()
     elif [ "${flag_distro}" = "kali" ]
     then
         fKali
+    else
+        echo "ignore distro setup."
     fi
 }
 fMain $@

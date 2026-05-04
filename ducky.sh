@@ -43,12 +43,17 @@ DOCKER_CONFIG_DOCKER_REPO="devlab"
 DOCKER_CONFIG_DOCKER_TAG="1.0"
 
 ##    Var config
-DOCKER_VAR_BASE_DISTRO="ubuntu"
+# for image
 DOCKER_VAR_BASE_IMAGE="ubuntu"
 DOCKER_VAR_BASE_IMAGE_TAG="24.04"
+# for distro setup
+DOCKER_VAR_BASE_DISTRO="ubuntu"
 
 DOCKER_VAR_MAINTAINER="breeze101792@gmail.com"
-DOCKER_VAR_USER_NAME="docker"
+DOCKER_VAR_USER_NAME="ducky"
+DOCKER_VAR_GROUP_NAME="ducky"
+DOCKER_VAR_UID="$(id -u)"
+DOCKER_VAR_GID="$(id -g)"
 DOCKER_VAR_USER_PASS="123456"
 ##################################################################
 ####    Runtime Variables
@@ -148,7 +153,7 @@ ADD ${var_tools_path} ${var_docker_tools_path}
 RUN bash ${var_docker_tools_path}/setup/distro.sh --distro ${DOCKER_VAR_BASE_DISTRO}
 
 # user setup
-RUN bash ${var_docker_tools_path}/setup/setup.sh --account --user ${DOCKER_VAR_USER_NAME} --pass ${DOCKER_VAR_USER_PASS}
+RUN bash ${var_docker_tools_path}/setup/setup.sh --account --user ${DOCKER_VAR_USER_NAME} --group ${DOCKER_VAR_GROUP_NAME} --uid ${DOCKER_VAR_UID} --gid ${DOCKER_VAR_GID} --pass ${DOCKER_VAR_USER_PASS}
 
 # Run project specify setup.
 RUN bash ${var_docker_tools_path}/project.sh
@@ -300,7 +305,7 @@ function fHelp()
     printf "    %- 32s\t %s\n" "ls" "list all images"
     printf "[Environment]\n"
     printf "    %- 32s\t %s\n" "[project name]" "set project context"
-    printf "    %- 32s\t %s\n" "env: ${VAR_HELPER_SUPPORT_PROJECTS[*]}" "Supported projects"
+    printf "    %- 32s\t\n" "    ${VAR_HELPER_SUPPORT_PROJECTS[*]}"
     printf "[Others]\n"
     printf "    %- 32s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
     printf "[Note.]\n"
@@ -330,7 +335,10 @@ function fMain()
 
     local var_container_instance=""
 
-    VAR_HELPER_SUPPORT_PROJECTS+=("linux" "fpga" "arch" "android" "zephyr")
+    # VAR_HELPER_SUPPORT_PROJECTS+=("linux" "fpga" "arch" "android" "zephyr" "min")
+    for each_proj in $(ls ${VAR_PROJECT_PATH}); do
+        VAR_HELPER_SUPPORT_PROJECTS+=(${each_proj})
+    done
     while [[ ${#} > 0 ]]
     do
         case ${1} in
