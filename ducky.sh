@@ -105,6 +105,7 @@ function fSetup_config()
     fi
 
     if test -f "${var_proj_path}/profile.sh"; then
+        echo "Using profile: ${var_proj_path}/profile.sh"
         source "${var_proj_path}/profile.sh"
     else
         echo "Profile not found."
@@ -227,6 +228,7 @@ function fBuild()
 function fRun()
 {
     fPrint_title "Run"
+    echo "${DOCKER_VAR_USER_NAME}:${DOCKER_VAR_USER_PASS}"
     local var_addictional_cmd=()
     if [ -n "${VAR_WORKPROJECT_PATH}" ]
     then
@@ -261,11 +263,19 @@ function fCommit()
 function fRemove()
 {
     fPrint_title "Remove"
-    local var_imgid=$(fGetImageID ${DOCKER_CONFIG_DOCKER_REPO} ${DOCKER_CONFIG_DOCKER_TAG})
-    if [ "${?}" = "0" ] && [ "${var_imgid}" != "" ]
-    then
-        echo "docker image rm ${var_imgid}"
-        docker image rm ${var_imgid}
+    local remove_by_id=false
+    if ${remove_by_id}; then
+        # remove by id
+        local var_imgid=$(fGetImageID ${DOCKER_CONFIG_DOCKER_REPO} ${DOCKER_CONFIG_DOCKER_TAG})
+        if [ "${?}" = "0" ] && [ "${var_imgid}" != "" ]
+        then
+            echo "docker image rm ${var_imgid}"
+            docker image rm ${var_imgid}
+        fi
+    else
+        # remove by tag
+        echo "docker image rm ${DOCKER_CONFIG_DOCKER_REPO} ${DOCKER_CONFIG_DOCKER_TAG}"
+        docker image rm ${DOCKER_CONFIG_DOCKER_REPO}:${DOCKER_CONFIG_DOCKER_TAG}
         docker images
     fi
 }
@@ -459,6 +469,11 @@ function fMain()
     fi
     if [ "${flag_build}" = "y" ]
     then
+        if [ "${flag_gen}" = "n" ]
+        then
+            echo "[Warning] Docker file generation is off. Press any key to continue."
+            read x
+        fi
         fBuild
     fi
     if [ "${flag_run}" = "y" ]

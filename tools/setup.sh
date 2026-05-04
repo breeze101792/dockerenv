@@ -22,7 +22,7 @@ function fPrint_title()
 }
 function fUser_setup()
 {
-    fPrint_title "User Setup"
+    fPrint_title "User Setup: ${CONFIG_USER_NAME}"
     local var_home_path="/home/${CONFIG_USER_NAME}"
     #######################################################
     ##    Setup System Env
