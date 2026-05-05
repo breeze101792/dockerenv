@@ -293,8 +293,20 @@ function fUpdateTools()
 {
     local var_src_tools=~/tools
     VAR_TOOLS_PATH="${VAR_ROOT_PATH}/tools"
-    cp -f $var_src_tools//shellscripts/tools/hslite/hslite.sh ${VAR_TOOLS_PATH}/bashrc
-    cp -f $var_src_tools/vim-ide/tools/vimlite.vim ${VAR_TOOLS_PATH}/vimrc
+    local bash_file="${var_src_tools}//shellscripts/tools/hslite/hslite.sh"
+    local vimrc_file="${var_src_tools}/xim/tools/vimlite.vim"
+    if test -e "${bash_file}"; then
+        echo "Update bashrc file "
+        cp -f ${bash_file} ${VAR_TOOLS_PATH}/bashrc
+    else
+        echo "hslite.sh not found. File: ${bash_file}"
+    fi
+    if test -e "${vimrc_file}"; then
+        echo "Update vimrc file "
+        cp -f ${vimrc_file} ${VAR_TOOLS_PATH}/vimrc
+    else
+        echo "vimlite.vim not found. File: ${vimrc_file}"
+    fi
 }
 function fHelp()
 {
