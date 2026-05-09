@@ -228,7 +228,7 @@ function fBuild()
 function fRun()
 {
     fPrint_title "Run"
-    echo "${DOCKER_VAR_USER_NAME}:${DOCKER_VAR_USER_PASS}"
+    # echo "${DOCKER_VAR_USER_NAME}:${DOCKER_VAR_USER_PASS}"
     local var_addictional_cmd=()
     if [ -n "${VAR_WORKPROJECT_PATH}" ]
     then
