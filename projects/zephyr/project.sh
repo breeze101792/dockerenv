@@ -4,25 +4,15 @@ VAR_SETUP_TITLE="zephyr"
 printf "##################################################################\n"
 printf "##  ${VAR_SETUP_TITLE} Experiment Environment Setup\n"
 printf "##################################################################\n"
-function fPrepare()
+function fSetupZephyrSDK_Setup()
 {
-    printf "##################################################################\n"
-    printf "## Prepare Setup\n"
-    printf "##################################################################\n"
-    fSetupZephyrSDK --download
+    local SDK_DIR="$(realpath /tools/zephyr-sdk-*)"
+    # FIXME, this is not a beautiful solution. we do setup twice.
+    pushd ${SDK_DIR}
+    ./setup.sh -t all -h -c
+    pushd
 }
-function fSetupUser()
-{
-    printf "##################################################################\n"
-    printf "## Finalize Setup\n"
-    printf "##################################################################\n"
-}
-function fInfo()
-{
-    printf "##################################################################\n"
-    printf "## Info\n"
-    printf "##################################################################\n"
-}
+
 function fSetupZephyrSDK()
 {
     # 1. Define Version and Target Directory
@@ -44,9 +34,9 @@ function fSetupZephyrSDK()
     esac
 
     local URL="https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${SDK_VERSION}/${ARCHIVE}"
+    local tmp_download_path="."
 
-    # 2. Download
-    local tmp_download_path="./"
+    # Part 1: Download
     if [ ! -f "${tmp_download_path}/${ARCHIVE}" ]; then
         test -d "${tmp_download_path}" || mkdir -p "${tmp_download_path}"
         echo "📥 Downloading Zephyr SDK v${SDK_VERSION}..."
@@ -55,7 +45,7 @@ function fSetupZephyrSDK()
             aria2c -x 16 -s 16 -d "${tmp_download_path}" -o "${ARCHIVE}" "${URL}"
         elif command -v wget &> /dev/null; then
             echo "📥 Using wget..."
-            wget "${URL}" -O "${tmp_download_path}/${ARCHIVE}"
+            wget -q --show-progress "${URL}" -O "${tmp_download_path}/${ARCHIVE}"
         else
             echo "📥 Using curl..."
             curl -L "${URL}" -o "${tmp_download_path}/${ARCHIVE}"
@@ -69,26 +59,30 @@ function fSetupZephyrSDK()
         return 0
     fi
 
-    # 3. Extract
+    # Part 2: Extract
     if [ -f "${tmp_download_path}/${ARCHIVE}" ]; then
         echo "📦 Extracting to ${SDK_DIR}..."
         mkdir -p "${SDK_DIR}"
         tar -xJf "${tmp_download_path}/${ARCHIVE}" -C "${SDK_DIR}" --strip-components=1
+    else
+        echo "❌ Archive not found, cannot extract."
+        return 1
     fi
 
-    # 3. Run SDK Setup Script (Crucial for host tools)
+    # Part 3: SDK Setup
     echo "⚙️ Running SDK setup..."
-    cd "${SDK_DIR}" && ./setup.sh -t all -h -c
+    pushd "${SDK_DIR}"
+    ./setup.sh -t all -h -c
+    popd
 
-    # 4. Export Variables for Docker/Shell
-    export ZEPHYR_SDK_INSTALL_DIR="${SDK_DIR}"
-    export ZEPHYR_TOOLCHAIN_VARIANT="zephyr"
+    # Part 4: Finalize
+    # export ZEPHYR_SDK_INSTALL_DIR="${SDK_DIR}"
+    # export ZEPHYR_TOOLCHAIN_VARIANT="zephyr"
     
-    # 5. Register with West
-    if command -v west &> /dev/null; then
-        west config zephyr.sdk "${SDK_DIR}"
-        echo "✅ SDK registered with West."
-    fi
+    # if command -v west &> /dev/null; then
+    #     west config zephyr.sdk "${SDK_DIR}"
+    #     echo "✅ SDK registered with West."
+    # fi
 
     echo "🚀 Zephyr SDK Setup Complete!"
 }
@@ -106,6 +100,34 @@ function fGetDependency()
     if [ "$(uname -m)" = "x86_64" ]; then
         sudo apt install -y --no-install-recommends gcc-multilib g++-multilib
     fi
+}
+function fPrepare()
+{
+    printf "##################################################################\n"
+    printf "## Prepare Setup\n"
+    printf "##################################################################\n"
+    fSetupZephyrSDK --download
+}
+function fSetup()
+{
+    printf "##################################################################\n"
+    printf "## Default Setup\n"
+    printf "##################################################################\n"
+    fGetDependency
+    fSetupZephyrSDK
+}
+function fSetupUser()
+{
+    printf "##################################################################\n"
+    printf "## Finalize Setup\n"
+    printf "##################################################################\n"
+    fSetupZephyrSDK_Setup
+}
+function fInfo()
+{
+    printf "##################################################################\n"
+    printf "## Info\n"
+    printf "##################################################################\n"
 }
 function fHelp()
 {
@@ -163,8 +185,7 @@ function fMain()
     fi
     if [ "${flag_setup}" = "y" ]
     then
-        fGetDependency
-        fSetupZephyrSDK
+        fSetup
     fi
     if [ "${flag_user_setup}" = "y" ]
     then

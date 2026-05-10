@@ -1,53 +1,57 @@
 #!/bin/bash
-if test -d "./.venv-zephyr"; then
+
+if test -d "./.venv-zephyr" && test -d "./.west"; then
     exit 0
+else
+    read -p ".venv-zephyr/.west not found. Do you want to proceed with creation? (y/N) " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]
+    then
+        exit 1
+    fi
 fi
 
-read -p "Virtual environment .venv-zephyr not found. Do you want to proceed with creation? (y/n) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]
-then
-    exit 1
+if ! test -d "./.venv-zephyr"; then
+    echo "####################################"
+    echo "##  Create Venv"
+    echo "####################################"
+
+    python3 -m venv .venv-zephyr
 fi
 
-python3 -m venv .venv-zephyr
+# source venv
 source .venv-zephyr/bin/activate
 
-pip install west
+if ! test -d "./.west"; then
+    # detect west manifest directory
+    WEST_APP_PATH="$(dirname */west.yml)"
+    echo "####################################"
+    echo "##  APP |${WEST_APP_PATH}|"
+    echo "####################################"
+    if ! test -f "./${WEST_APP_PATH}/west.yml"; then
+        echo "Can't find west.yml"
+        exit 1
+    fi
 
-# dectact west folder
-WEST_APP_PATH="$(dirname */west.yml)"
-echo "####################################"
-echo "##  APP |${WEST_APP_PATH}|"
-echo "####################################"
+    # install west tool
+    pip install west
 
-## west init
-# 1. use remote URL to init(-m specify manifest)
-west init -l ${WEST_APP_PATH}
+    ## west init
+    # Initialize west using the local manifest directory (-l)
+    west init -l ${WEST_APP_PATH}
 
-# 2. config git safe dir
-# git config --global --add safe.directory /workdir/zephyr
+    # 2. pull all repositories defined in west.yml
+    west update
 
-# 3. enter app(west init will clone to here)
-cd ${WEST_APP_PATH}
+    # 3. install python dependencies via west
+    west packages pip --install
 
-# 4. pull all repo (define on west.yml )
-west update
+    # 4. install additional zephyr requirements if present
+    if test -f "zephyr/scripts/requirements.txt"; then
+        pip install -r zephyr/scripts/requirements.txt
+    else
+        echo "Zephyr not found."
+    fi
 
-# 5. check dir structure
-ls
-# You will see .west/  app/  zephyr/  modules/ ...
-
-# install sdk
-# west sdk install
-
-# install deps
-west packages pip --install
-
-if test -f "zephyr/scripts/requirements.txt"; then
-    pip install -r zephyr/scripts/requirements.txt
-else
-    echo "Zephyr not found."
+    # git config --global --add safe.directory /workdir/
 fi
-
-# git config --global --add safe.directory /workdir/

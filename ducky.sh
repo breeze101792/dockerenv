@@ -22,6 +22,7 @@ fi
 # path config
 VAR_TOOLS_PATH="${VAR_ROOT_PATH}/tools"
 VAR_BUILD_PATH="${VAR_ROOT_PATH}/build"
+VAR_CACHED_PATH="${VAR_ROOT_PATH}/cached"
 VAR_PROJECT_PATH="${VAR_ROOT_PATH}/projects"
 VAR_PROJECT_NAME="default"
 
@@ -114,10 +115,27 @@ function fSetup_config()
 
 ####    Docker files generation
 ##################################################################
+function fGen_projectprepare()
+{
+    local var_cached_path="${VAR_CACHED_PATH}/${VAR_PROJECT_NAME}"
+    local var_tools_path="${VAR_BUILD_PATH}/tools"
+
+    test -d "${var_cached_path}" || mkdir -p "${var_cached_path}"
+
+    if test -f "${var_tools_path}/project.sh"; then
+        echo "prepare project setup file."
+        local var_tools_setup=${var_tools_path}/setup
+        bash ${var_tools_path}/project.sh --prepare --working-path ${var_cached_path}
+        # cp -rf ${var_cached_path}/* ${var_tools_setup}/
+    fi
+}
 function fGen_buildfolder()
 {
     local var_proj_path=${VAR_PROJECT_PATH}/${VAR_PROJECT_NAME}
     local var_tools_path="${VAR_BUILD_PATH}/tools"
+
+    # clearn build folder
+    test -d "${VAR_BUILD_PATH}" && rm -rf "${VAR_BUILD_PATH}"
     # create build folder
     test -d "${VAR_BUILD_PATH}" || mkdir -p "${VAR_BUILD_PATH}"
 
@@ -135,7 +153,9 @@ function fGen_buildfolder()
 function fGen_dockerfile()
 {
     local var_docker_tools_path="/tools"
+    local var_docker_project_tools_path="/tools/project"
     local var_tools_path="build/tools"
+    local var_cached_path="cached/${VAR_PROJECT_NAME}"
     cat <<EOF > "${VAR_BUILD_DEF_DOCKER_FILE}"
 ## base image
 FROM ${DOCKER_VAR_BASE_IMAGE}:${DOCKER_VAR_BASE_IMAGE_TAG}
@@ -146,6 +166,7 @@ MAINTAINER ${DOCKER_VAR_MAINTAINER}
 ##    System settings
 #######################################################
 ADD ${var_tools_path} ${var_docker_tools_path}
+ADD ${var_cached_path} ${var_docker_project_tools_path}
 # distro setup
 RUN bash ${var_docker_tools_path}/setup/distro.sh --distro ${DOCKER_VAR_BASE_DISTRO}
 
@@ -153,7 +174,7 @@ RUN bash ${var_docker_tools_path}/setup/distro.sh --distro ${DOCKER_VAR_BASE_DIS
 RUN bash ${var_docker_tools_path}/setup/setup.sh --account --user ${DOCKER_VAR_USER_NAME} --group ${DOCKER_VAR_GROUP_NAME} --uid ${DOCKER_VAR_UID} --gid ${DOCKER_VAR_GID} --pass ${DOCKER_VAR_USER_PASS}
 
 # Run project specify setup. may need to move prepare outside the docker.
-RUN bash ${var_docker_tools_path}/project.sh --setup --working-path /tools/setup
+RUN bash ${var_docker_tools_path}/project.sh --setup --working-path ${var_docker_project_tools_path}
 
 RUN chmod +x ${var_docker_tools_path}/project.sh
 RUN chmod +x ${var_docker_tools_path}/bootstrap.sh
@@ -162,13 +183,14 @@ RUN chmod +x ${var_docker_tools_path}/entrypoint.sh
 ## User setup
 USER ${DOCKER_VAR_USER_NAME}
 # Run project user setup.
-RUN bash ${var_docker_tools_path}/project.sh --user-setup --working-path /tools/setup
+RUN bash ${var_docker_tools_path}/project.sh --user-setup --working-path ${var_docker_project_tools_path}
 
 USER root
 ## clean out setup folder
 RUN rm -r ${var_docker_tools_path}/setup
 RUN rm -r ${var_docker_tools_path}/profile.sh
 RUN rm -r ${var_docker_tools_path}/project.sh
+RUN rm -r ${var_docker_project_tools_path}
 
 #######################################################
 ##    Finalize Docker Setting
@@ -185,6 +207,7 @@ function fGenFiles()
     echo "docker gen file ${VAR_BUILD_DEF_DOCKER_FILE} tag ${DOCKER_CONFIG_DOCKER_REPO}:${DOCKER_CONFIG_DOCKER_TAG} ."
 
     fGen_buildfolder
+    fGen_projectprepare
     fGen_dockerfile
 }
 ####    Docker functions
@@ -214,7 +237,6 @@ function fGetImageID()
 function fBuild()
 {
     fPrint_title "Build"
-    local var_tools_path="${VAR_BUILD_PATH}/tools"
     echo "docker build --file ${VAR_BUILD_DEF_DOCKER_FILE} --tag ${DOCKER_CONFIG_DOCKER_REPO}:${DOCKER_CONFIG_DOCKER_TAG} ."
 
     # echo fGetImageID ${DOCKER_CONFIG_DOCKER_REPO} ${DOCKER_CONFIG_DOCKER_TAG}
@@ -223,12 +245,6 @@ function fBuild()
     then
         echo "Image already found on docker image"
         exit -1
-    fi
-
-    if test -f "${var_tools_path}/project.sh"; then
-        echo "prepare project setup file."
-        local var_tools_setup=${var_tools_path}/setup
-        bash ${var_tools_path}/project.sh --prepare --working-path ${var_tools_setup}
     fi
 
     echo "Start building Container"
@@ -338,6 +354,8 @@ function fHelp()
     printf "    %- 32s\t %s\n" "-d|--device|device" "pass device passthrough to container"
     printf "[Shortcuts]\n"
     printf "    %- 32s\t %s\n" "ls" "list all images"
+    printf "    %- 32s\t %s\n" "df" "show docker disk usage"
+    printf "    %- 32s\t %s\n" "prune" "prune docker containers and images"
     printf "[Environment]\n"
     printf "    %- 32s\t %s\n" "[project name]" "set project context"
     printf "    %- 32s\t\n" "    ${VAR_HELPER_SUPPORT_PROJECTS[*]}"
@@ -359,7 +377,6 @@ function fHelp_Docker()
 }
 function fMain()
 {
-    fPrint_title "Docker Env Setup"
     local flag_gen="n"
     local flag_build="n"
     local flag_run="n"
@@ -451,6 +468,16 @@ function fMain()
             ## Shortcuts
             ls)
                 docker images
+                return 0
+                ;;
+            df)
+                docker system df
+                return 0
+                ;;
+            prune)
+                # docker container prune
+                # docker image prune -a
+                docker image prune
                 return 0
                 ;;
             -h|--help)

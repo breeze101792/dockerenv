@@ -1,4 +1,4 @@
-#!/binash
+#!/bin/bash
 ##################################################################
 ####    config
 ##################################################################
@@ -59,10 +59,8 @@ function fUser_setup()
 
     # setup sudo
     if command -v "sudo"; then
-        # group
-        echo "%${CONFIG_GROUP_NAME}  ALL=(ALL)       ALL" >> /etc/sudoers
         # user
-        echo "${CONFIG_USER_NAME}  ALL=(ALL)       ALL" >> /etc/sudoers
+        echo "${CONFIG_USER_NAME}  ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
     fi
 
     #######################################################
@@ -74,6 +72,20 @@ function fUser_setup()
     chown ${CONFIG_USER_NAME}:${CONFIG_USER_NAME} ${var_home_path}/tools
     ln -sf ${var_home_path}/tools/vimrc ${var_home_path}/.vimrc
     echo "source ${var_home_path}/tools/bashrc" >> ${var_home_path}/.bashrc
+}
+
+function fHelp()
+{
+    echo "Setup Script"
+    echo "[Options]"
+    echo "    --account              Setup user account and system environment"
+    echo "    --user [name]          Set user name (default: ducky)"
+    echo "    --group [name]         Set group name (default: ducky)"
+    echo "    --uid [id]             Set user ID (default: 1000)"
+    echo "    --gid [id]             Set group ID (default: 1000)"
+    echo "    --pass [password]      Set user password"
+    echo "    --tools [path]         Set tools path"
+    echo "    -h|--help              Show this help info"
 }
 
 function fMain()
