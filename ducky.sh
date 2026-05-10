@@ -119,14 +119,10 @@ function fGen_buildfolder()
     local var_proj_path=${VAR_PROJECT_PATH}/${VAR_PROJECT_NAME}
     local var_tools_path="${VAR_BUILD_PATH}/tools"
     # create build folder
-    if test -d ${VAR_BUILD_PATH}
-    then
-        rm -rf "${VAR_BUILD_PATH}"
-    fi
-    mkdir -p "${VAR_BUILD_PATH}"
+    test -d "${VAR_BUILD_PATH}" || mkdir -p "${VAR_BUILD_PATH}"
 
     # create tools
-    mkdir -p "${var_tools_path}/setup"
+    test -d "${var_tools_path}/setup" || mkdir -p "${var_tools_path}/setup"
     cp -rf "${VAR_TOOLS_PATH}"/* "${var_tools_path}/setup/"
 
     # create project files
@@ -156,15 +152,23 @@ RUN bash ${var_docker_tools_path}/setup/distro.sh --distro ${DOCKER_VAR_BASE_DIS
 # user setup
 RUN bash ${var_docker_tools_path}/setup/setup.sh --account --user ${DOCKER_VAR_USER_NAME} --group ${DOCKER_VAR_GROUP_NAME} --uid ${DOCKER_VAR_UID} --gid ${DOCKER_VAR_GID} --pass ${DOCKER_VAR_USER_PASS}
 
-# Run project specify setup.
-RUN bash ${var_docker_tools_path}/project.sh
+# Run project specify setup. may need to move prepare outside the docker.
+RUN bash ${var_docker_tools_path}/project.sh --setup --working-path /tools/setup
 
-# clean out setup folder
+RUN chmod +x ${var_docker_tools_path}/project.sh
+RUN chmod +x ${var_docker_tools_path}/bootstrap.sh
+RUN chmod +x ${var_docker_tools_path}/entrypoint.sh
+
+## User setup
+USER ${DOCKER_VAR_USER_NAME}
+# Run project user setup.
+RUN bash ${var_docker_tools_path}/project.sh --user-setup --working-path /tools/setup
+
+USER root
+## clean out setup folder
 RUN rm -r ${var_docker_tools_path}/setup
 RUN rm -r ${var_docker_tools_path}/profile.sh
 RUN rm -r ${var_docker_tools_path}/project.sh
-
-RUN chmod +x ${var_docker_tools_path}/entrypoint.sh
 
 #######################################################
 ##    Finalize Docker Setting
@@ -210,6 +214,7 @@ function fGetImageID()
 function fBuild()
 {
     fPrint_title "Build"
+    local var_tools_path="${VAR_BUILD_PATH}/tools"
     echo "docker build --file ${VAR_BUILD_DEF_DOCKER_FILE} --tag ${DOCKER_CONFIG_DOCKER_REPO}:${DOCKER_CONFIG_DOCKER_TAG} ."
 
     # echo fGetImageID ${DOCKER_CONFIG_DOCKER_REPO} ${DOCKER_CONFIG_DOCKER_TAG}
@@ -218,6 +223,12 @@ function fBuild()
     then
         echo "Image already found on docker image"
         exit -1
+    fi
+
+    if test -f "${var_tools_path}/project.sh"; then
+        echo "prepare project setup file."
+        local var_tools_setup=${var_tools_path}/setup
+        bash ${var_tools_path}/project.sh --prepare --working-path ${var_tools_setup}
     fi
 
     echo "Start building Container"
@@ -232,7 +243,7 @@ function fRun()
     local var_addictional_cmd=()
     if [ -n "${VAR_WORKPROJECT_PATH}" ]
     then
-        var_addictional_cmd+=("-v ${VAR_WORKPROJECT_PATH}:${VAR_RUNTIME_WORKDIRP_PATH}")
+        var_addictional_cmd+=("-v $(realpath ${VAR_WORKPROJECT_PATH}):${VAR_RUNTIME_WORKDIRP_PATH}")
     fi
     # TODO, need to verify this.
     if [ -n "${VAR_RUNTIME_DEVICE_PASSTHROUGH}" ]
@@ -270,12 +281,12 @@ function fRemove()
         if [ "${?}" = "0" ] && [ "${var_imgid}" != "" ]
         then
             echo "docker image rm ${var_imgid}"
-            docker image rm ${var_imgid}
+            docker image rm --force ${var_imgid}
         fi
     else
         # remove by tag
         echo "docker image rm ${DOCKER_CONFIG_DOCKER_REPO} ${DOCKER_CONFIG_DOCKER_TAG}"
-        docker image rm ${DOCKER_CONFIG_DOCKER_REPO}:${DOCKER_CONFIG_DOCKER_TAG}
+        docker image rm --force ${DOCKER_CONFIG_DOCKER_REPO}:${DOCKER_CONFIG_DOCKER_TAG}
         docker images
     fi
 }
@@ -314,6 +325,7 @@ function fHelp()
     printf "[Options]\n"
     printf "    %- 32s\t %s\n" "-g|--gen|gen [proj]" "generate docker files"
     printf "    %- 32s\t %s\n" "-b|--build|build [proj]" "build test docker"
+    printf "    %- 32s\t %s\n" "-B|--Build|Build [proj]" "force rebuild (remove, gen, build)"
     printf "    %- 32s\t %s\n" "-r|--run|run [proj]" "run test docker"
     printf "    %- 32s\t %s\n" "-c|--commit|commit" "commit container changes, ex. -c [container id]"
     printf "    %- 32s\t %s\n" "-p|--prune|prune" "Clean system cached"
@@ -323,6 +335,7 @@ function fHelp()
 
     printf "[Runtime Config]\n"
     printf "    %- 32s\t %s\n" "-w|--workdir|workdir" "pass folder as workdir on container"
+    printf "    %- 32s\t %s\n" "-d|--device|device" "pass device passthrough to container"
     printf "[Shortcuts]\n"
     printf "    %- 32s\t %s\n" "ls" "list all images"
     printf "[Environment]\n"
@@ -374,6 +387,19 @@ function fMain()
                 done
                 ;;
             -b|--build|build)
+                flag_build=y
+                for proj in "${VAR_HELPER_SUPPORT_PROJECTS[@]}"; do
+                    if [[ "${2}" == "${proj}" ]]; then 
+                        VAR_PROJECT_NAME="${2}";
+                        flag_gen=y
+                        shift 1; 
+                        break;
+                    fi
+                done
+                ;;
+            -B|--Build|Build)
+                flag_rm=y
+                flag_gen=y
                 flag_build=y
                 for proj in "${VAR_HELPER_SUPPORT_PROJECTS[@]}"; do
                     if [[ "${2}" == "${proj}" ]]; then 

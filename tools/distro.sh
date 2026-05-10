@@ -33,7 +33,7 @@ function fArchlinux()
     # Update system
     pacman -Syyu --noconfirm
     pacman -S --noconfirm base-devel sudo
-    pacman -S --noconfirm vim git
+    pacman -S --noconfirm tmux vim git
 }
 function fKali()
 {
