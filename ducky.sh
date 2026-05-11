@@ -196,7 +196,7 @@ RUN rm -r ${var_docker_project_tools_path}
 ##    Finalize Docker Setting
 #######################################################
 USER ${DOCKER_VAR_USER_NAME}
-ENTRYPOINT ${var_docker_tools_path}/entrypoint.sh
+ENTRYPOINT ["/bin/bash", "${var_docker_tools_path}/entrypoint.sh"]
 # WORKDIR /home/${DOCKER_VAR_USER_NAME}
 WORKDIR /workdir
 EOF
@@ -255,6 +255,7 @@ function fBuild()
 function fRun()
 {
     fPrint_title "Run"
+    local var_execuate_command="$@"
     # echo "${DOCKER_VAR_USER_NAME}:${DOCKER_VAR_USER_PASS}"
     local var_addictional_cmd=()
     if [ -n "${VAR_WORKPROJECT_PATH}" ]
@@ -274,8 +275,8 @@ function fRun()
         var_addictional_cmd+=("-v /tmp/.X11-unix/:/tmp/.X11-unix/")
     fi
     # --rm                             Automatically remove the container when it exits
-    echo docker run -it ${var_addictional_cmd[@]} --rm -u ${DOCKER_VAR_USER_NAME} ${DOCKER_CONFIG_DOCKER_REPO}:${DOCKER_CONFIG_DOCKER_TAG}
-    docker run -it ${var_addictional_cmd[@]} -h ${DOCKER_CONFIG_DOCKER_REPO} --rm -u ${DOCKER_VAR_USER_NAME} ${DOCKER_CONFIG_DOCKER_REPO}:${DOCKER_CONFIG_DOCKER_TAG}
+    echo docker run -it ${var_addictional_cmd[@]} -h ${DOCKER_CONFIG_DOCKER_REPO} --rm -u ${DOCKER_VAR_USER_NAME} ${DOCKER_CONFIG_DOCKER_REPO}:${DOCKER_CONFIG_DOCKER_TAG} ${var_execuate_command}
+    docker run -it ${var_addictional_cmd[@]} -h ${DOCKER_CONFIG_DOCKER_REPO} --rm -u ${DOCKER_VAR_USER_NAME} ${DOCKER_CONFIG_DOCKER_REPO}:${DOCKER_CONFIG_DOCKER_TAG} ${var_execuate_command}
     # "docker run --cpus=13 -it --rm --name android_builder -v /mnt/projects/android:/home/docker/android -u docker android_builder:v1.0 /bin/bash"
 }
 function fCommit()
@@ -339,28 +340,30 @@ function fHelp()
 {
     printf "Script\n"
     printf "[Options]\n"
-    printf "    %- 32s\t %s\n" "-g|--gen|gen [proj]" "generate docker files"
-    printf "    %- 32s\t %s\n" "-b|--build|build [proj]" "build test docker"
-    printf "    %- 32s\t %s\n" "-B|--Build|Build [proj]" "force rebuild (remove, gen, build)"
-    printf "    %- 32s\t %s\n" "-r|--run|run [proj]" "run test docker"
-    printf "    %- 32s\t %s\n" "-c|--commit|commit" "commit container changes, ex. -c [container id]"
-    printf "    %- 32s\t %s\n" "-p|--prune|prune" "Clean system cached"
-    printf "    %- 32s\t %s\n" "--remove|remove" "remove test docker"
-    printf "    %- 32s\t %s\n" "--clean|clean" "remove none image"
-    printf "    %- 32s\t %s\n" "--update-tools" "update tools on system"
+    printf "    %- 32s\t %s\n" "-g|--gen|gen [proj]" "Generate Dockerfile and build context"
+    printf "    %- 32s\t %s\n" "-b|--build|build [proj]" "Build Docker image for the project"
+    printf "    %- 32s\t %s\n" "-B|--Build|Build [proj]" "Force rebuild: Remove image, regenerate files, and build"
+    printf "    %- 32s\t %s\n" "-r|--run|run [proj]" "Run the Docker container"
+    printf "    %- 32s\t %s\n" "-e|--exec|exec [command]" "Run a specific command in the Docker container"
+    printf "    %- 32s\t %s\n" "-c|--commit|commit" "Commit changes from a running container to the image"
+    printf "    %- 32s\t %s\n" "-p|--project|project [proj]" "Set the project context explicitly"
+    printf "    %- 32s\t %s\n" "--prune|prune" "Prune Docker system (containers, networks, etc.)"
+    printf "    %- 32s\t %s\n" "--remove|remove" "Remove the project Docker image"
+    printf "    %- 32s\t %s\n" "--clean|clean" "Remove untagged (<none>) images"
+    printf "    %- 32s\t %s\n" "--update-tools" "Update internal tools (bashrc, vimrc) from source"
 
     printf "[Runtime Config]\n"
-    printf "    %- 32s\t %s\n" "-w|--workdir|workdir" "pass folder as workdir on container"
-    printf "    %- 32s\t %s\n" "-d|--device|device" "pass device passthrough to container"
+    printf "    %- 32s\t %s\n" "-w|--workdir|workdir" "Pass folder as workdir on container"
+    printf "    %- 32s\t %s\n" "-d|--device|device" "Pass device passthrough to container"
     printf "[Shortcuts]\n"
-    printf "    %- 32s\t %s\n" "ls" "list all images"
-    printf "    %- 32s\t %s\n" "df" "show docker disk usage"
-    printf "    %- 32s\t %s\n" "prune" "prune docker containers and images"
+    printf "    %- 32s\t %s\n" "ls" "List all images"
+    printf "    %- 32s\t %s\n" "df" "Show docker disk usage"
+    printf "    %- 32s\t %s\n" "prune" "Prune docker images"
     printf "[Environment]\n"
-    printf "    %- 32s\t %s\n" "[project name]" "set project context"
+    printf "    %- 32s\t %s\n" "[project name]" "Set project context by name"
     printf "    %- 32s\t\n" "    ${VAR_HELPER_SUPPORT_PROJECTS[*]}"
     printf "[Others]\n"
-    printf "    %- 32s\t %s\n" "-h|--help"  "print help info, for docker help, do docker run --help"
+    printf "    %- 32s\t %s\n" "-h|--help"  "Print help info, for docker help, do docker run --help"
     printf "[Note.]\n"
     printf "    %- 32s\t %s\n" "Build android env" "ducky.sh android -b"
     printf "    %- 32s\t %s\n" "Running android env" "ducky.sh android -r"
@@ -380,10 +383,12 @@ function fMain()
     local flag_gen="n"
     local flag_build="n"
     local flag_run="n"
+    local flag_exec="n"
     local flag_rm="n"
     local flag_commit="n"
     local flag_clean="n"
     local flag_prune="n"
+    local var_execuate_command=""
 
     local var_container_instance=""
 
@@ -394,9 +399,6 @@ function fMain()
     while [[ ${#} > 0 ]]
     do
         case ${1} in
-            --update-tools)
-                fUpdateTools
-                ;;
             -g|--gen|gen)
                 flag_gen=y
                 for proj in "${VAR_HELPER_SUPPORT_PROJECTS[@]}"; do
@@ -433,10 +435,21 @@ function fMain()
                     if [[ "${2}" == "${proj}" ]]; then VAR_PROJECT_NAME="${2}"; shift 1; break; fi
                 done
                 ;;
-            -p|--prune|prune)
+            -e|--exec|exec)
+                flag_run=y
+                shift 1
+                var_execuate_command="$@"
+                break;
+                ;;
+            -p|--project|project)
+                for proj in "${VAR_HELPER_SUPPORT_PROJECTS[@]}"; do
+                    if [[ "${2}" == "${proj}" ]]; then VAR_PROJECT_NAME="${2}"; shift 1; break; fi
+                done
+                ;;
+            --prune|prune)
                 flag_prune="y"
                 ;;
-            -c|--commit|commit)
+            --commit|commit)
                 flag_commit=y
                 var_container_instance=$2
                 shift 1
@@ -479,6 +492,9 @@ function fMain()
                 # docker image prune -a
                 docker image prune
                 return 0
+                ;;
+            --update-tools)
+                fUpdateTools
                 ;;
             -h|--help)
                 fHelp
@@ -543,8 +559,9 @@ function fMain()
     fi
     if [ "${flag_run}" = "y" ]
     then
-        fRun
+        fRun ${var_execuate_command}
     fi
+
     popd
 }
 fMain $@

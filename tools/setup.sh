@@ -57,10 +57,9 @@ function fUser_setup()
     useradd -g ${CONFIG_GROUP_NAME} -d ${var_home_path} -u ${CONFIG_HOST_UID} -m ${CONFIG_USER_NAME}
     echo ${CONFIG_USER_NAME}:${CONFIG_USER_PASSWD} | chpasswd
 
-    # setup sudo
+    # setup sudo: allow the user to run sudo without a password
     if command -v "sudo"; then
-        # user
-        echo "${CONFIG_USER_NAME}  ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+        echo "${CONFIG_USER_NAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
     fi
 
     #######################################################

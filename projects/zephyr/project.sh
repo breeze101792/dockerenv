@@ -40,6 +40,7 @@ function fSetupZephyrSDK()
     if [ ! -f "${tmp_download_path}/${ARCHIVE}" ]; then
         test -d "${tmp_download_path}" || mkdir -p "${tmp_download_path}"
         echo "📥 Downloading Zephyr SDK v${SDK_VERSION}..."
+        # Prioritize aria2c for fast multi-threaded download if available
         if command -v aria2c &> /dev/null; then
             echo "🚀 Using aria2c for fast download..."
             aria2c -x 16 -s 16 -d "${tmp_download_path}" -o "${ARCHIVE}" "${URL}"
